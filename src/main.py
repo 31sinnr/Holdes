@@ -1,26 +1,46 @@
 import requests
 from bs4 import BeautifulSoup
 from requestor import Requestor
+import style as s
+
+GITHUB_API_URL = "https://api.github.com/repos/31sinnr/Holdes/releases/latest"
+LOCAL_VERSION = "1.2"
+
+def get_latest_release_tag():
+    try:
+        response = requests.get(GITHUB_API_URL, timeout=5)
+        if response.status_code == 200:
+            return response.json().get("tag_name", "")
+    except requests.RequestException as e:
+        return
+    return None
+
+def check_version():
+    latest = get_latest_release_tag()
+    if latest != LOCAL_VERSION:
+        print(f"Доступна новая версия: {s.Colors.GREEN}{LOCAL_VERSION}{s.Colors.RESET}")
+        print(f"Скачать можно тут: {s.Colors.BLUE}https://github.com/31sinnr/Holdes/releases/latest{s.Colors.RESET}\n")
+
+check_version()
 
 def get_product(url):
     try:
         response = Requestor.make_request(url, True)
 
         if not response:
-            print("❌ Ошибка при загрузке страницы.")
+            s.error("Ошибка при загрузке страницы.")
             return
 
         soup = BeautifulSoup(response, 'html.parser')
         params_block = soup.find("div", class_="params-list params-list--in-product")
         
         if not params_block:
-            print("⚠️ Не удалось найти блок с характеристиками.")
+            s.warning("Не удалось найти блок с характеристиками.")
             return
 
         items = params_block.find_all("div", class_="params-list__item")
         with open("product.txt", "w", encoding="utf-8") as f:
             f.write("Характеристики товара:\n\n")
-            print("\nХарактеристики товара:\n")
 
             for item in items:
                 name_div = item.find("div", class_="params-list__item-name")
@@ -68,11 +88,12 @@ def get_product(url):
                     name_text = name_text.strip()
 
                 line = f"{prefix}{name_text}: {value_text}"
-                print(line) 
-                f.write(line + "\n") 
+                f.write(line + "\n")
+            s.success("Характеристики товара добавлены в product.txt")
 
     except requests.exceptions.RequestException as e:
-        print(f"❌ Ошибка при загрузке страницы: {e}")
+        s.error(f"Ошибка при загрузке страницы: {e}")
 
-url = input("Введите ссылку на товар:\n")
+url = input(f"Введите ссылку на товар: {s.Colors.BLUE}")
+print(f"{s.Colors.RESET}")
 get_product(url)
